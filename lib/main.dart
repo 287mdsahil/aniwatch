@@ -50,11 +50,24 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: const Text('Search Page'),
       ),
-      body: Center(
-        child: ElevatedButton(onPressed: (){
-            getAnimes();
-          }, child: Text("Search"))
-      ),
+      body: Container(
+        child:Card(
+          child: FutureBuilder(
+            future: getAnimes(),
+            builder: (context,AsyncSnapshot snapshot) {
+              if(snapshot.data == null) {
+                return Container(child:Center(child:Text("Loading")));
+              } else {
+                return ListView.builder(itemCount: snapshot.data.length, itemBuilder: (context, i){
+                  return ListTile(
+                    title: Text(snapshot.data[i].title),
+                  );
+                });
+              }
+            },
+          ),
+        )
+      )
     );
   }
 }
