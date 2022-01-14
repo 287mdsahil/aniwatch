@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
+import 'package:cached_network_image/cached_network_image.dart';
 
 void main() {
   runApp(const MyApp());
@@ -45,11 +46,11 @@ class _SearchPageState extends State<SearchPage> {
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
     for(var a in document.getElementsByClassName("img")) {
-      Anime anime = Anime(a.children[0].attributes["title"] ?? "null");
+      Anime anime = Anime(a.children[0].attributes["title"] ?? "null", a.children[0].children[0].attributes["src"] ?? "null");
+      print(anime.title + "," + anime.image_url);
       animeList.add(anime);
     }
 
-    print(document.getElementsByClassName("img")[0].children[0].attributes["title"]);
     return animeList;
   }
 
@@ -61,7 +62,7 @@ class _SearchPageState extends State<SearchPage> {
     List<Anime> animeList = [];
 
     for(var a in jsonData['results']) {
-      Anime anime = Anime(a['title']);
+      Anime anime = Anime(a['title'], "placeholder_image_url");
       animeList.add(anime);
     }
     print("Fetched " + animeList.length.toString() + " titles");
@@ -91,7 +92,8 @@ class _SearchPageState extends State<SearchPage> {
                 } else {
                   return ListView.builder(itemCount: snapshot.data.length, itemBuilder: (context, i){
                     return ListTile(
-                        title: Text(snapshot.data[i].title),
+                        title: Image(image: CachedNetworkImageProvider(snapshot.data[i].image_url),height: 200,),
+                        subtitle: Text(snapshot.data[i].title)
                         );
                     });
                 }
@@ -123,5 +125,6 @@ class Anime {
      }
    */
   String title;
-  Anime(this.title);
+  String image_url;
+  Anime(this.title, this.image_url);
 }
