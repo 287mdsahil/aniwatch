@@ -24,6 +24,8 @@ class MyApp extends StatelessWidget {
 }
 
 
+//--------------------------Search page-----------------------------
+
 class SearchPage extends StatefulWidget {
     @override
     _SearchPageState createState() => _SearchPageState();
@@ -38,7 +40,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future getAnimesFromGogoanime() async {
-    Map<String, String> queryParams = {'keyword':'Attack on Titan'};
+    Map<String, String> queryParams = {'keyword':'naruto'};
     List<Anime> animeList = [];
     print("Trying...");
     var url = Uri.https("www3.gogoanime.cm", "search.html", queryParams);
@@ -46,14 +48,16 @@ class _SearchPageState extends State<SearchPage> {
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
     for(var a in document.getElementsByClassName("img")) {
-      Anime anime = Anime(a.children[0].attributes["title"] ?? "null", a.children[0].children[0].attributes["src"] ?? "null");
+      Anime anime = Anime(a.children[0].attributes["title"] ?? "null", 
+                          a.children[0].children[0].attributes["src"] ?? "null",
+                          a.children[0].attributes["href"] ?? "null");
       print(anime.title + "," + anime.image_url);
       animeList.add(anime);
     }
-
     return animeList;
   }
 
+  /*
   Future getAnimes() async {
     Map<String, String> queryParams = {'q':'naruto'};
     var url = Uri.https("api.jikan.moe", "v3/search/anime", queryParams);
@@ -67,6 +71,17 @@ class _SearchPageState extends State<SearchPage> {
     }
     print("Fetched " + animeList.length.toString() + " titles");
     return animeList;
+  }
+  */
+
+  void goToAnimePage(Anime anime) {
+      print("Going to anime page of " + anime.title);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+            AnimePage(anime : anime),
+        )
+      );
   }
 
   @override
@@ -93,7 +108,8 @@ class _SearchPageState extends State<SearchPage> {
                   return ListView.builder(itemCount: snapshot.data.length, itemBuilder: (context, i){
                     return ListTile(
                         title: Image(image: CachedNetworkImageProvider(snapshot.data[i].image_url),height: 200,),
-                        subtitle: Text(snapshot.data[i].title)
+                        subtitle: Text(snapshot.data[i].title),
+                        onTap: () {goToAnimePage(snapshot.data[i]);},
                         );
                     });
                 }
@@ -126,5 +142,109 @@ class Anime {
    */
   String title;
   String image_url;
-  Anime(this.title, this.image_url);
+  String href;
+  String? type;
+  String? plot_summary;
+  int? n_episodes;
+  Anime(this.title, this.image_url, this.href);
+}
+
+
+//--------------------------Anime page-----------------------------
+class AnimePage extends StatefulWidget {
+    final Anime anime;
+
+    AnimePage({Key? key, required this.anime,}) : super(key: key);
+
+    @override
+    _AnimePageState createState() => _AnimePageState();
+}
+
+
+class _AnimePageState extends State<AnimePage>{
+
+  Future getAnimeDetails(Anime anime) async {
+    var url = Uri.https("www3.gogoanime.cm", anime.href);
+    print(url);
+    var response = await http.Client().get(url);
+    var document = parser.parse(response.body);
+    //print(document.getElementById("episode_page")?.children[0].children[0].attributes);
+    
+
+    anime.type = document.getElementsByClassName("anime_info_body")[0].children[0].children[3].children[1].text;
+    anime.plot_summary = document.getElementsByClassName("anime_info_body")[0].children[0].children[4].text;
+
+    anime.n_episodes = 0;
+    if(document.getElementById("episode_page")?.children !=  null) {
+      var elements = document.getElementById("episode_page")?.children ?? [];
+      for(var d in elements)
+        anime.n_episodes = int.tryParse(d.children[0].attributes["ep_end"] ?? "0");
+    }
+
+    print(anime.n_episodes);
+    return anime;
+  }
+
+
+  void goToEpisodePage(Anime anime, int episode) {
+      print("Going to episode " + episode.toString() + " of " + anime.title);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+            EpisodePage(anime: anime, episode: episode),
+        )
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.anime.title),),
+      body: FutureBuilder(
+        future: getAnimeDetails(widget.anime), 
+        builder: (context,AsyncSnapshot snapshot) {
+          if(snapshot.data == null) return Container(child:Center(child:Text("Loading")));
+          return SingleChildScrollView( 
+            child: Column(
+              children: [
+                Image(image: CachedNetworkImageProvider(snapshot.data.image_url)),
+                Text(snapshot.data.type),
+                Text(snapshot.data.plot_summary),
+                Column(
+                children: List.generate(snapshot.data.n_episodes, (index) => 
+                    ElevatedButton(child: Text((index+1).toString()), onPressed: (){goToEpisodePage(snapshot.data,index+1);},)
+                  )
+                )
+              ],
+            )
+          );
+        }
+      )
+    );
+  } 
+
+}
+
+
+
+
+//--------------------------Episode page-----------------------------
+class EpisodePage extends StatefulWidget {
+    final Anime anime;
+    final int episode;
+
+    EpisodePage({Key? key, required this.anime,required this.episode}) : super(key: key);
+
+    @override
+    _EpisodePageState createState() => _EpisodePageState();
+}
+
+
+class _EpisodePageState extends State<EpisodePage>{
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.anime.title + " ep:" + widget.episode.toString())),
+    );
+  }
 }
