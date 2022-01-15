@@ -256,7 +256,7 @@ class _EpisodePageState extends State<EpisodePage>{
     var url = Uri.https("www3.gogoanime.cm", widget.anime.getAnimeId() + "-episode-" + widget.episode.toString());
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
-    widget.dpage_link = "https:" + (document.getElementsByClassName("active")[0].attributes["data-video"] ?? "/null");
+    widget.dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
     print(widget.dpage_link);
   }
 
