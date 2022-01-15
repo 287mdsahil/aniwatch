@@ -147,6 +147,10 @@ class Anime {
   String? plot_summary;
   int? n_episodes;
   Anime(this.title, this.image_url, this.href);
+
+  String getAnimeId() {
+    return href.split("/")[2];
+  }
 }
 
 
@@ -233,6 +237,10 @@ class EpisodePage extends StatefulWidget {
     final Anime anime;
     final int episode;
 
+    // Main urls
+    String? dpage_link;
+    String? video_url;
+
     EpisodePage({Key? key, required this.anime,required this.episode}) : super(key: key);
 
     @override
@@ -241,10 +249,27 @@ class EpisodePage extends StatefulWidget {
 
 
 class _EpisodePageState extends State<EpisodePage>{
+
+  Future getDpageLink() async {
+    print(widget.anime.getAnimeId());
+
+    var url = Uri.https("www3.gogoanime.cm", widget.anime.getAnimeId() + "-episode-" + widget.episode.toString());
+    var response = await http.Client().get(url);
+    var document = parser.parse(response.body);
+    widget.dpage_link = "https:" + (document.getElementsByClassName("active")[0].attributes["data-video"] ?? "/null");
+    print(widget.dpage_link);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.anime.title + " ep:" + widget.episode.toString())),
+      body: FutureBuilder(
+        future: getDpageLink(), 
+        builder: (context,AsyncSnapshot snapshot) {
+          return Container(child:Center(child:Text("Loading")));
+        }
+      )
     );
   }
 }
