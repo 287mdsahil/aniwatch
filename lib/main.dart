@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:convert/convert.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,8 +34,6 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  String _searchTitle = "";
-  final GlobalKey<_SearchPageState> _formKey = GlobalKey<_SearchPageState>();
 
   Widget _buildSearchTitleField() {
     return Text("test");
@@ -51,7 +51,7 @@ class _SearchPageState extends State<SearchPage> {
       Anime anime = Anime(a.children[0].attributes["title"] ?? "null", 
                           a.children[0].children[0].attributes["src"] ?? "null",
                           a.children[0].attributes["href"] ?? "null");
-      print(anime.title + "," + anime.image_url);
+      //print(anime.title + "," + anime.image_url);
       animeList.add(anime);
     }
     return animeList;
@@ -250,14 +250,52 @@ class EpisodePage extends StatefulWidget {
 
 class _EpisodePageState extends State<EpisodePage>{
 
-  Future getDpageLink() async {
-    print(widget.anime.getAnimeId());
+  String decryptData(final String encrypted) {
+    String hex_secret_key = "3235373436353338353932393338333936373634363632383739383333323838";
+    List<int> int_key = hex.decode(hex_secret_key);
+    String secret_key = new String.fromCharCodes(int_key);
 
+    String hex_iv_str = "34323036393133333738303038313335";
+    List<int> int_iv = hex.decode(hex_iv_str);
+    String iv_str = new String.fromCharCodes(int_iv);
+
+    final key = encrypt.Key.fromUtf8(secret_key);
+    final iv = encrypt.IV.fromUtf8(iv_str);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
+
+    final decrypted = encrypter.encrypt(encrypted, iv: iv).base64;
+    print("Decrypted: " + decrypted);
+    return decrypted;
+  }
+
+  Future getLinks() async {
+
+    // Dpage link
     var url = Uri.https("www3.gogoanime.cm", widget.anime.getAnimeId() + "-episode-" + widget.episode.toString());
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
     widget.dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
     print(widget.dpage_link);
+ 
+    // decrypt link
+    String video_id = (widget.dpage_link?.split("?")[1].split("&")[0].split("id=")[1] ?? "");
+    print("video_id : " + video_id);
+    String decrypted_video_id = decryptData(video_id);
+
+    var headers = {
+      'x-requested-with': 'XMLHttpRequest',
+    };
+
+    var data = {
+      'id': 'KRSPSIebzjAB4niq5B3r0A',
+      'time': '69420691337800813569',
+    };
+
+    var ajax_url = Uri.https("gogoplay.io", "/encrypt-ajax.php");
+    var res = await http.post(ajax_url, headers: headers, body: data);
+    if (res.statusCode != 200) throw Exception('http.post error: statusCode= ${res.statusCode}');
+    print(res.body);
+  
   }
 
   @override
@@ -265,7 +303,7 @@ class _EpisodePageState extends State<EpisodePage>{
     return Scaffold(
       appBar: AppBar(title: Text(widget.anime.title + " ep:" + widget.episode.toString())),
       body: FutureBuilder(
-        future: getDpageLink(), 
+        future: getLinks(), 
         builder: (context,AsyncSnapshot snapshot) {
           return Container(child:Center(child:Text("Loading")));
         }
