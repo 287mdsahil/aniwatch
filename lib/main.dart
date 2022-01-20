@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:convert/convert.dart';
+import 'package:video_player/video_player.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,7 +42,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future getAnimesFromGogoanime() async {
-    Map<String, String> queryParams = {'keyword':'naruto'};
+    Map<String, String> queryParams = {'keyword':'boruto'};
     List<Anime> animeList = [];
     print("Trying...");
     var url = Uri.https("www3.gogoanime.cm", "search.html", queryParams);
@@ -237,10 +239,6 @@ class EpisodePage extends StatefulWidget {
     final Anime anime;
     final int episode;
 
-    // Main urls
-    String? dpage_link;
-    String? video_url;
-
     EpisodePage({Key? key, required this.anime,required this.episode}) : super(key: key);
 
     @override
@@ -274,11 +272,11 @@ class _EpisodePageState extends State<EpisodePage>{
     var url = Uri.https("www3.gogoanime.cm", widget.anime.getAnimeId() + "-episode-" + widget.episode.toString());
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
-    widget.dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
-    print(widget.dpage_link);
+    String dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
+    print(dpage_link);
  
     // decrypt link
-    String video_id = (widget.dpage_link?.split("?")[1].split("&")[0].split("id=")[1] ?? "");
+    String video_id = dpage_link.split("?")[1].split("&")[0].split("id=")[1];
     print("video_id : " + video_id);
     String decrypted_video_id = decryptData(video_id);
 
@@ -287,15 +285,28 @@ class _EpisodePageState extends State<EpisodePage>{
     };
 
     var data = {
-      'id': 'KRSPSIebzjAB4niq5B3r0A',
+      'id': decrypted_video_id,
       'time': '69420691337800813569',
     };
 
     var ajax_url = Uri.https("gogoplay.io", "/encrypt-ajax.php");
     var res = await http.post(ajax_url, headers: headers, body: data);
     if (res.statusCode != 200) throw Exception('http.post error: statusCode= ${res.statusCode}');
-    print(res.body);
-  
+    Map<String, dynamic> map = json.decode(res.body);
+    List<dynamic> source = map["source"]; 
+    print("Episode file: " + source[0]["file"]);
+    return source; 
+  }
+
+  void play(video_url) {
+    print("Going to Video page");
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+          //VideoPlayerScreen(video_url: video_url),
+          VLCVideoPage(video_url: video_url),
+      )
+    );
   }
 
   @override
@@ -305,9 +316,154 @@ class _EpisodePageState extends State<EpisodePage>{
       body: FutureBuilder(
         future: getLinks(), 
         builder: (context,AsyncSnapshot snapshot) {
-          return Container(child:Center(child:Text("Loading")));
+          print(snapshot.data);
+          if(snapshot.data == null) return Container(child:Center(child:Text("Loading")));
+          else {
+            return SingleChildScrollView(child: Column(
+                children: List.generate(snapshot.data.length, (index) => 
+                    ElevatedButton(
+                      child: Text((snapshot.data[index]["label"]).toString()), 
+                      onPressed: (){play(snapshot.data[index]["file"]);})
+            )));
+          }
         }
       )
     );
+  }
+}
+
+
+
+
+//--------------------------------Video Screen------------------------------
+class VideoPlayerScreen extends StatefulWidget {
+  final String video_url;
+  const VideoPlayerScreen({Key? key, required this.video_url}) : super(key: key);
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+  late Future<void> _initializeVideoPlayerFuture;
+
+  @override
+  void initState() {
+    // Create and store the VideoPlayerController. The VideoPlayerController
+    // offers several different constructors to play videos from assets, files,
+    // or the internet.
+    _controller = VideoPlayerController.network(widget.video_url);
+
+    _initializeVideoPlayerFuture = _controller.initialize();
+    // Use the controller to loop the video.
+    _controller.setLooping(true);
+
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    // Ensure disposing of the VideoPlayerController to free up resources.
+    _controller.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Anime Video'),
+      ),
+      // Use a FutureBuilder to display a loading spinner while waiting for the
+      // VideoPlayerController to finish initializing.
+      body: FutureBuilder(
+        future: _initializeVideoPlayerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            // If the VideoPlayerController has finished initialization, use
+            // the data it provides to limit the aspect ratio of the video.
+            return AspectRatio(
+              aspectRatio: _controller.value.aspectRatio,
+              // Use the VideoPlayer widget to display the video.
+              child: VideoPlayer(_controller),
+            );
+          } else {
+            // If the VideoPlayerController is still initializing, show a
+            // loading spinner.
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Wrap the play or pause in a call to `setState`. This ensures the
+          // correct icon is shown.
+          setState(() {
+            // If the video is playing, pause it.
+            if (_controller.value.isPlaying) {
+              _controller.pause();
+            } else {
+              // If the video is paused, play it.
+              _controller.play();
+            }
+          });
+        },
+        // Display the correct icon depending on the state of the player.
+        child: Icon(
+          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+        ),
+      ),
+    );
+  }
+}
+
+//----------------------------------------VLC------------------------------------------
+class VLCVideoPage extends StatefulWidget {
+  final String video_url;
+  const VLCVideoPage({Key? key, required this.video_url}) : super(key: key);
+
+  @override
+  _VLCVideoPageState createState() => _VLCVideoPageState();
+}
+
+class _VLCVideoPageState extends State<VLCVideoPage> {
+  late VlcPlayerController _videoPlayerController;
+
+  Future<void> initializePlayer() async {}
+
+  @override
+  void initState() {
+    super.initState();
+
+    _videoPlayerController = VlcPlayerController.network(
+      widget.video_url,
+      hwAcc: HwAcc.FULL,
+      autoPlay: true,
+      options: VlcPlayerOptions(),
+    );
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    await _videoPlayerController.stopRendererScanning();
+    //await _videoViewController.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: VlcPlayer(
+            controller: _videoPlayerController,
+            aspectRatio: 16 / 9,
+            placeholder: Center(child: CircularProgressIndicator()),
+          ),
+        ));
   }
 }
