@@ -36,14 +36,28 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  late TextEditingController _controller;
+  List<Anime>? animeList;
 
-  Widget _buildSearchTitleField() {
-    return Text("test");
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
   }
 
-  Future getAnimesFromGogoanime() async {
-    Map<String, String> queryParams = {'keyword':'boruto'};
-    List<Anime> animeList = [];
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void getAnimesFromGogoanime(String? keyword) async {
+    setState(() {
+      animeList = null;
+      print("calling set state...");
+    });
+    Map<String, String> queryParams = {'keyword':(keyword ?? "")};
+    List<Anime> newAnimeList = [];
     print("Trying...");
     var url = Uri.https("www3.gogoanime.cm", "search.html", queryParams);
     print(url);
@@ -53,28 +67,14 @@ class _SearchPageState extends State<SearchPage> {
       Anime anime = Anime(a.children[0].attributes["title"] ?? "null", 
                           a.children[0].children[0].attributes["src"] ?? "null",
                           a.children[0].attributes["href"] ?? "null");
-      //print(anime.title + "," + anime.image_url);
-      animeList.add(anime);
+      print(anime.title + "," + anime.image_url);
+      newAnimeList.add(anime);
     }
-    return animeList;
+    setState(() {
+      animeList = newAnimeList;
+      print("calling set state...");
+    });
   }
-
-  /*
-  Future getAnimes() async {
-    Map<String, String> queryParams = {'q':'naruto'};
-    var url = Uri.https("api.jikan.moe", "v3/search/anime", queryParams);
-    var response = await http.get(url);
-    var jsonData = jsonDecode(response.body);
-    List<Anime> animeList = [];
-
-    for(var a in jsonData['results']) {
-      Anime anime = Anime(a['title'], "placeholder_image_url");
-      animeList.add(anime);
-    }
-    print("Fetched " + animeList.length.toString() + " titles");
-    return animeList;
-  }
-  */
 
   void goToAnimePage(Anime anime) {
       print("Going to anime page of " + anime.title);
@@ -86,38 +86,41 @@ class _SearchPageState extends State<SearchPage> {
       );
   }
 
+  Widget getBody() {
+    if(animeList == null) return Center(child: Text("Loading"),);
+    List<Anime> nonNullAnimeList = animeList ?? [];
+    return Expanded( child :ListView.builder(itemCount: nonNullAnimeList.length, itemBuilder: (context, i){
+      return ListTile(
+          title: Image(image: CachedNetworkImageProvider(nonNullAnimeList[i].image_url),height: 200,),
+          subtitle: Text(nonNullAnimeList[i].title),
+          onTap: () {goToAnimePage(nonNullAnimeList[i]);},
+          );
+      }));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Page'),
+        toolbarHeight: 80,
+        title: Container(
+          padding: EdgeInsets.symmetric(horizontal: 15),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              child: TextFormField(
+                decoration: InputDecoration(
+                  icon: Icon(Icons.search),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                ),
+                controller: _controller,
+                onFieldSubmitted: (String keyword) {getAnimesFromGogoanime(keyword);},
+              ),
+        ),
       ),
       body: Container(
         child: Column(
-          children: [
-          Form(child: Column(children:<Widget> [
-           _buildSearchTitleField(),
-           ElevatedButton(onPressed: () => {}, child: Text("Search"),)
-          ],)
-          ),
-          Expanded(
-            child: FutureBuilder(
-              future: getAnimesFromGogoanime(),
-              builder: (context,AsyncSnapshot snapshot) {
-                if(snapshot.data == null) {
-                  return Container(child:Center(child:Text("Loading")));
-                } else {
-                  return ListView.builder(itemCount: snapshot.data.length, itemBuilder: (context, i){
-                    return ListTile(
-                        title: Image(image: CachedNetworkImageProvider(snapshot.data[i].image_url),height: 200,),
-                        subtitle: Text(snapshot.data[i].title),
-                        onTap: () {goToAnimePage(snapshot.data[i]);},
-                        );
-                    });
-                }
-              }),
-            )
-          ])
+          children: [getBody()],
+        )
       )
     );
   }
