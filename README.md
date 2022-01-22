@@ -1,16 +1,26 @@
 # aniwatch
+An app that replicates what ani-cli does.
+A browser tool that scrapes gogoanime.
 
-A new Flutter project.
+# Notes for the developer
 
-## Getting Started
+## Directory Structure we are going for
+```
+--lib
+  |--screens
+  |--utils
+  |--widgets
+  |--services
+  |--data
+  |-- ...
+```
 
-This project is a starting point for a Flutter application.
+* **Screens**: This folder will contain the application UI files rendered on the device screen.
 
-A few resources to get you started if this is your first Flutter project:
+* **Utils**: This folder contains the functions used to implement the application’s business logic. For instance, if we build a social media application that supports a multi-account login, the utilities will ensure that the data rendered is changed according to the currently logged-in account.
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+* **Widgets**: This folder contains widgets that are used repeatedly in the application. If you are using an API to list GitHub accounts following a particular user, the followers’ list view remains the same. Only the data that is rendered is dynamic. In such a case, we will use the followers widget in our widgets folder.
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+* **Models** This folder holds DAO classes.
+
+* **Services**: Services folder should handle your application’s networking logic. For example, once a user gets authenticated with Google or GitHub, the application needs to update the backend with the access token. The service folder will contain the implementation of the logic responsible for handling this functionality.
