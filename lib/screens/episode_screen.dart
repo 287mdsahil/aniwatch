@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:convert/convert.dart';
 import 'package:aniwatch/models/anime.dart';
-import 'package:aniwatch/screens/vlc_video_screen.dart';
+import 'package:aniwatch/screens/video_screen.dart';
 
 class EpisodePage extends StatefulWidget {
     final Anime anime;
@@ -77,7 +77,7 @@ class _EpisodePageState extends State<EpisodePage>{
       MaterialPageRoute(
         builder: (context) =>
           //VideoPlayerScreen(video_url: video_url),
-          VLCVideoPage(video_url: video_url),
+          VideoPage(videoUrl: video_url),
       )
     );
   }
