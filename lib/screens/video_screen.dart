@@ -12,8 +12,10 @@ class VideoPage extends StatefulWidget {
 
 class _VideoPageState extends State<VideoPage> {
   late VideoPlayerController _videoPlayerController;
+  final GlobalKey _videoPlayerWidgetKey = GlobalKey();
 
   Future<void> initializePlayer() async {}
+
 
   @override
   void initState() {
@@ -41,7 +43,9 @@ class _VideoPageState extends State<VideoPage> {
   void _doubleTapDownCallback(TapDownDetails details) async {
     print("Tap Tap Down...");
     print(details.localPosition);
-    double width = _videoPlayerController.value.size.width;
+    double width = (_videoPlayerWidgetKey.currentContext?.size?.width ?? 0);
+    print("width: " + width.toString());
+    print("local position dx: " + details.localPosition.dx.toString());
     if(details.localPosition.dx > width/2) 
       _fastForward(10); 
     else 
@@ -67,6 +71,7 @@ class _VideoPageState extends State<VideoPage> {
       body: 
       Center(
         child: GestureDetector( 
+          key: _videoPlayerWidgetKey,
           onTap: _togglePausePlay,
           onDoubleTap: _doubleTapCallback,
           onDoubleTapDown: _doubleTapDownCallback,
@@ -78,7 +83,16 @@ class _VideoPageState extends State<VideoPage> {
           ),
           */
           child: _videoPlayerController.value.isInitialized || _videoPlayerController.value.isBuffering
-            ? AspectRatio(child: VideoPlayer(_videoPlayerController), aspectRatio: _videoPlayerController.value.aspectRatio,)
+            ? AspectRatio(
+              aspectRatio: _videoPlayerController.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  VideoPlayer( _videoPlayerController),
+                  VideoProgressIndicator(_videoPlayerController, allowScrubbing: true),
+                ],
+              ),
+            )
             : Center(child: CircularProgressIndicator())
         ),
       )
