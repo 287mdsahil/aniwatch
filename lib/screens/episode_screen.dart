@@ -46,7 +46,7 @@ class _EpisodePageState extends State<EpisodePage>{
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
     String dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
-    print(dpage_link);
+    print("dpage link: " + dpage_link);
  
     // decrypt link
     String video_id = dpage_link.split("?")[1].split("&")[0].split("id=")[1];
@@ -65,6 +65,7 @@ class _EpisodePageState extends State<EpisodePage>{
     var ajax_url = Uri.https("gogoplay.io", "/encrypt-ajax.php");
     var res = await http.post(ajax_url, headers: headers, body: data);
     if (res.statusCode != 200) throw Exception('http.post error: statusCode= ${res.statusCode}');
+    print("response body: " + res.body);
     Map<String, dynamic> map = json.decode(res.body);
     List<dynamic> source = map["source"]; 
     print("Episode file: " + source[0]["file"]);

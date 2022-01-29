@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -13,6 +15,7 @@ class VideoPage extends StatefulWidget {
 class _VideoPageState extends State<VideoPage> {
   late VideoPlayerController _videoPlayerController;
   final GlobalKey _videoPlayerWidgetKey = GlobalKey();
+  bool _visible = true;
 
   Future<void> initializePlayer() async {}
 
@@ -35,9 +38,16 @@ class _VideoPageState extends State<VideoPage> {
 
   void _togglePausePlay() async {
     print("Tap...");
-    _videoPlayerController.value.isPlaying
-        ? await _videoPlayerController.pause()
-        : await _videoPlayerController.play();
+    _visible = true;
+    setState(() {
+      _videoPlayerController.value.isPlaying
+        ? _visible = true
+        : _visible = false;
+
+      _videoPlayerController.value.isPlaying
+          ? _videoPlayerController.pause()
+          : _videoPlayerController.play();
+    });
   }
 
   void _doubleTapDownCallback(TapDownDetails details) async {
@@ -64,6 +74,33 @@ class _VideoPageState extends State<VideoPage> {
     await _videoPlayerController.seekTo(seekTo);
   }
 
+  Widget getVideoPlayerWidget() {
+    return AspectRatio(
+      aspectRatio: _videoPlayerController.value.aspectRatio,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          VideoPlayer( _videoPlayerController),
+          AnimatedSwitcher(
+            duration: Duration(milliseconds: 50),
+            reverseDuration: Duration(milliseconds: 500),
+            child: _visible
+              ? Container(
+                color: Colors.black26,
+                child: Center(child: Icon(Icons.play_arrow, color: Colors.white, size: 75))
+              )
+              : SizedBox.shrink()
+          ),
+          VideoProgressIndicator(
+            _videoPlayerController, 
+            allowScrubbing: true,
+            padding: EdgeInsets.all(10),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,16 +120,7 @@ class _VideoPageState extends State<VideoPage> {
           ),
           */
           child: _videoPlayerController.value.isInitialized || _videoPlayerController.value.isBuffering
-            ? AspectRatio(
-              aspectRatio: _videoPlayerController.value.aspectRatio,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  VideoPlayer( _videoPlayerController),
-                  VideoProgressIndicator(_videoPlayerController, allowScrubbing: true),
-                ],
-              ),
-            )
+            ? getVideoPlayerWidget()
             : Center(child: CircularProgressIndicator())
         ),
       )
