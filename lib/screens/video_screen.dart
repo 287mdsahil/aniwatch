@@ -6,7 +6,8 @@ import 'package:video_player/video_player.dart';
 
 class VideoPage extends StatefulWidget {
   final String videoUrl;
-  const VideoPage({Key? key, required this.videoUrl}) : super(key: key);
+  final String dPageUrl;
+  const VideoPage({Key? key, required this.videoUrl, required this.dPageUrl}) : super(key: key);
 
   @override
   _VideoPageState createState() => _VideoPageState();
@@ -24,7 +25,10 @@ class _VideoPageState extends State<VideoPage> {
   void initState() {
     super.initState();
 
-    _videoPlayerController = VideoPlayerController.network(widget.videoUrl)
+    Map<String, String> httpHeaders = new Map();
+    httpHeaders['Referer'] = widget.dPageUrl;
+
+    _videoPlayerController = VideoPlayerController.network(widget.videoUrl, httpHeaders: httpHeaders)
       ..initialize().then((_) {
         setState(() {});
       });

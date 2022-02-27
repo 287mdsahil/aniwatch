@@ -21,6 +21,8 @@ class EpisodePage extends StatefulWidget {
 
 class _EpisodePageState extends State<EpisodePage>{
 
+  late String dpage_link;
+
   String decryptData(final String encrypted) {
     String hex_secret_key = "3235373436353338353932393338333936373634363632383739383333323838";
     List<int> int_key = hex.decode(hex_secret_key);
@@ -45,7 +47,7 @@ class _EpisodePageState extends State<EpisodePage>{
     var url = Uri.https("www3.gogoanime.cm", widget.anime.getAnimeId() + "-episode-" + widget.episode.toString());
     var response = await http.Client().get(url);
     var document = parser.parse(response.body);
-    String dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
+    dpage_link = "https:" + (document.getElementsByClassName("vidcdn")[0].children[0].attributes["data-video"] ?? "/null");
     print("dpage link: " + dpage_link);
  
     // decrypt link
@@ -72,13 +74,13 @@ class _EpisodePageState extends State<EpisodePage>{
     return source; 
   }
 
-  void play(video_url) {
+  void play(video_url, dpage_url) {
     print("Going to Video page");
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) =>
           //VideoPlayerScreen(video_url: video_url),
-          VideoPage(videoUrl: video_url),
+          VideoPage(videoUrl: video_url, dPageUrl: dpage_url,),
       )
     );
   }
@@ -97,7 +99,7 @@ class _EpisodePageState extends State<EpisodePage>{
                 children: List.generate(snapshot.data.length, (index) => 
                     ElevatedButton(
                       child: Text((snapshot.data[index]["label"]).toString()), 
-                      onPressed: (){play(snapshot.data[index]["file"]);})
+                      onPressed: (){play(snapshot.data[index]["file"], dpage_link);})
             )));
           }
         }
