@@ -4,6 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:aniwatch/models/anime.dart';
 import 'package:aniwatch/screens/episode_screen.dart';
+import '../services/database_service.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/animeEpisodeWatchHistory.dart';
 
 class AnimePage extends StatefulWidget {
     final Anime anime;
@@ -42,6 +46,7 @@ class _AnimePageState extends State<AnimePage>{
 
   void goToEpisodePage(Anime anime, int episode) {
       print("Going to episode " + episode.toString() + " of " + anime.title);
+      Boxes.saveAnimeEpisodeWatchHistory(anime.getAnimeId(), episode); 
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) =>
@@ -64,6 +69,14 @@ class _AnimePageState extends State<AnimePage>{
                 Image(image: CachedNetworkImageProvider(snapshot.data.image_url)),
                 Text(snapshot.data.type),
                 Text(snapshot.data.plot_summary),
+                ValueListenableBuilder<Box<AnimeEpisodeWatchHistory>>(
+                  valueListenable: Boxes.getAnimeEpisodeWatchHistoryBox().listenable(), 
+                  builder: (context, box, _) {
+                    final watchHistory = box.get(widget.anime.getAnimeId());
+                    int lastWatched = (watchHistory?.lastWatched ?? 0);
+                    return Text("Last watched episode:" + lastWatched.toString());
+                  }
+                ),
                 Column(
                 children: List.generate(snapshot.data.n_episodes, (index) => 
                     ElevatedButton(child: Text((index+1).toString()), onPressed: (){goToEpisodePage(snapshot.data,index+1);},)
