@@ -1,6 +1,7 @@
 # aniwatch
 An app that replicates what ani-cli does.
 A browser tool that scrapes gogoanime.
+A android app based on https://github.com/pystardust/ani-cli 
 
 # Notes for the developer
 
